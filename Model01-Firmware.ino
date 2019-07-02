@@ -253,12 +253,12 @@ static void anyKeyMacro(uint8_t keyState) {
  */
 static void ledKeyMacro(uint8_t keyState) {
   if (keyToggledOn(keyState)) {
-    if (Layer.isOn(QWERTY)) {
-      Layer.off(QWERTY);
-      Layer.on(DVORAK);
+    if (Layer.isActive(QWERTY)) {
+      Layer.deactivate(QWERTY);
+      Layer.activate(DVORAK);
     } else {
-      Layer.off(DVORAK);
-      Layer.on(QWERTY);
+      Layer.deactivate(DVORAK);
+      Layer.activate(QWERTY);
     }
   }
 }
