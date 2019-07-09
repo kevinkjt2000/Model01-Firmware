@@ -245,8 +245,9 @@ static void anyKeyMacro(uint8_t keyState) {
     toggledOn = true;
   }
 
-  if (keyIsPressed(keyState))
+  if (keyIsPressed(keyState)) {
     Kaleidoscope.hid().keyboard().pressKey(lastKey, toggledOn);
+  }
 }
 
 /** ledKeyMacro is used to provide cycling of keybaord layouts
@@ -378,6 +379,42 @@ USE_MAGIC_COMBOS({.action = toggleKeyboardProtocol,
   .keys = { R3C6, R0C0, R0C6 }
 });
 
+namespace kaleidoscope {
+class FocusTestCommand : public Plugin {
+ public:
+  FocusTestCommand() {}
+
+  EventHandlerResult onFocusEvent(const char *command) {
+    const char *cmd = PSTR("baby");
+
+    if (::Focus.handleHelp(command, cmd))
+      return EventHandlerResult::OK;
+
+    if (strcmp_P(command, cmd) == 0) {
+      LEDControl.set_all_leds_to(255, 20, 147);
+      return EventHandlerResult::EVENT_CONSUMED;
+    }
+
+    return EventHandlerResult::OK;
+  }
+};
+
+class FocusHelpCommand : public Plugin {
+ public:
+  FocusHelpCommand() {}
+
+  EventHandlerResult onFocusEvent(const char *command) {
+    ::Focus.handleHelp(command, PSTR("help"));
+
+    return EventHandlerResult::OK;
+  }
+};
+
+}
+
+kaleidoscope::FocusTestCommand FocusTestCommand;
+kaleidoscope::FocusHelpCommand FocusHelpCommand;
+
 // First, tell Kaleidoscope which plugins you want to use.
 // The order can be important. For example, LED effects are
 // added in the order they're listed here.
@@ -395,6 +432,9 @@ KALEIDOSCOPE_INIT_PLUGINS(
   // changing some settings of the keyboard, such as the default layer (via the
   // `settings.defaultLayer` command)
   FocusSettingsCommand,
+
+  // My own Focus commands
+  FocusTestCommand, FocusHelpCommand,
 
   // FocusEEPROMCommand adds a set of Focus commands, which are very helpful in
   // both debugging, and in backing up one's EEPROM contents.
