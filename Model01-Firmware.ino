@@ -16,13 +16,6 @@
 // The Kaleidoscope core
 #include "Kaleidoscope.h"
 
-// Support for storing the keymap in EEPROM
-#include "Kaleidoscope-EEPROM-Settings.h"
-#include "Kaleidoscope-EEPROM-Keymap.h"
-
-// Support for communicating with the host via a simple Serial protocol
-#include "Kaleidoscope-FocusSerial.h"
-
 // Support for keys that move the mouse
 #include "Kaleidoscope-MouseKeys.h"
 
@@ -31,9 +24,6 @@
 
 // Support for controlling the keyboard's LEDs
 #include "Kaleidoscope-LEDControl.h"
-
-// Support for "Numpad" mode, which is mostly just the Numpad specific LED mode
-#include "Kaleidoscope-NumPad.h"
 
 // Support for the "Boot greeting" effect, which pulses the 'LED' button for 10s
 // when the keyboard is connected to a computer (or that computer is powered on)
@@ -75,6 +65,9 @@
 // Support for USB quirks, like changing the key state report protocol
 #include "Kaleidoscope-USB-Quirks.h"
 
+// Support stenography via GeminiPR + Plover
+#include "Kaleidoscope-Steno.h"
+
 /** This 'enum' is a list of all the macros used by the Model 01's firmware
   * The names aren't particularly important. What is important is that each
   * is unique.
@@ -90,7 +83,7 @@
 
 enum { MACRO_VERSION_INFO,
        MACRO_ANY,
-       MACRO_LED
+       MACOR_SWAP_LAYOUTS,
      };
 
 
@@ -135,15 +128,8 @@ enum { MACRO_VERSION_INFO,
   * Similarly, a key defined as 'LockLayer(NUMPAD)' will switch to NUMPAD when tapped.
   */
 
-/**
-  * Layers are "0-indexed" -- That is the first one is layer 0. The second one is layer 1.
-  * The third one is layer 2.
-  * This 'enum' lets us use names like QWERTY, FUNCTION, and NUMPAD in place of
-  * the numbers 0, 1 and 2.
-  *
-  */
+enum { DVORAK, QWERTY, FUNCTION, STENO }; // layers
 
-enum { DVORAK, QWERTY, NUMPAD, FUNCTION }; // layers
 
 /* This comment temporarily turns off astyle's indent enforcement
  *   so we can make the keymaps actually resemble the physical key layout better
@@ -160,13 +146,12 @@ KEYMAPS(
    Key_LeftControl, Key_Backspace, Key_LeftGui, Key_LeftShift,
    ShiftToLayer(FUNCTION),
 
-   M(MACRO_ANY),   Key_6, Key_7, Key_8, Key_9, Key_0, LockLayer(NUMPAD),
+   M(MACRO_ANY),   Key_6, Key_7, Key_8, Key_9, Key_0, LockLayer(STENO),
    Key_Enter,      Key_F, Key_G, Key_C, Key_R, Key_L, Key_Slash,
                    Key_D, Key_H, Key_T, Key_N, Key_S, Key_Minus,
    Key_RightAlt,   Key_B, Key_M, Key_W, Key_V, Key_Z, Key_Equals,
    Key_RightShift, Key_LeftAlt, Key_Spacebar, Key_RightControl,
    ShiftToLayer(FUNCTION)),
-
 
   [QWERTY] = KEYMAP_STACKED
   (___,          Key_1, Key_2, Key_3, Key_4, Key_5, Key_LEDEffectNext,
@@ -176,33 +161,18 @@ KEYMAPS(
    Key_LeftControl, Key_Backspace, Key_LeftGui, Key_LeftShift,
    ShiftToLayer(FUNCTION),
 
-   M(MACRO_ANY),  Key_6, Key_7, Key_8,     Key_9,         Key_0,         LockLayer(NUMPAD),
+   M(MACRO_ANY),  Key_6, Key_7, Key_8,     Key_9,         Key_0,         LockLayer(STENO),
    Key_Enter,     Key_Y, Key_U, Key_I,     Key_O,         Key_P,         Key_Equals,
                   Key_H, Key_J, Key_K,     Key_L,         Key_Semicolon, Key_Quote,
    Key_RightAlt,  Key_N, Key_M, Key_Comma, Key_Period,    Key_Slash,     Key_Minus,
    Key_RightShift, Key_LeftAlt, Key_Spacebar, Key_RightControl,
    ShiftToLayer(FUNCTION)),
 
-  [NUMPAD] =  KEYMAP_STACKED
-  (___, ___, ___, ___, ___, ___, ___,
-   ___, ___, ___, ___, ___, ___, ___,
-   ___, ___, ___, ___, ___, ___,
-   ___, ___, ___, ___, ___, ___, ___,
-   ___, ___, ___, ___,
-   ___,
-
-   M(MACRO_VERSION_INFO),  ___, Key_7, Key_8,      Key_9,              Key_KeypadSubtract, ___,
-   ___,                    ___, Key_4, Key_5,      Key_6,              Key_KeypadAdd,      ___,
-                           ___, Key_1, Key_2,      Key_3,              Key_Equals,         ___,
-   ___,                    ___, Key_0, Key_Period, Key_KeypadMultiply, Key_KeypadDivide,   Key_Enter,
-   ___, ___, ___, ___,
-   ___),
-
   [FUNCTION] =  KEYMAP_STACKED
-  (___,      Key_F1,           Key_F2,      Key_F3,     Key_F4,        Key_F5,           M(MACRO_LED),
+  (___,      Key_F1,           Key_F2,      Key_F3,     Key_F4,        Key_F5,           M(MACOR_SWAP_LAYOUTS),
    Key_Tab,  ___,              Key_mouseUp, Key_LeftCurlyBracket,        Key_mouseBtnR, Key_mouseWarpEnd, Key_mouseWarpNE,
    Key_Home, Key_mouseL,       Key_mouseDn, Key_mouseR, Key_mouseBtnL, Key_mouseWarpNW,
-   Key_End,  Key_PrintScreen,  Key_Insert,  Key_G,        Key_mouseBtnM, Key_mouseWarpSW,  Key_mouseWarpSE,
+   Key_End,  Key_PrintScreen,  Key_Insert,  Key_G,      Key_mouseBtnM, Key_mouseWarpSW,  Key_mouseWarpSE,
    ___, Key_Delete, ___, ___,
    ___,
 
@@ -211,6 +181,23 @@ KEYMAPS(
                                Key_LeftArrow,          Key_DownArrow,            Key_UpArrow,              Key_RightArrow,  ___,              ___,
    Key_PcApplication,          Consumer_Mute,          Consumer_VolumeDecrement, Consumer_VolumeIncrement, ___,             Key_Backslash,    Key_Pipe,
    ___, ___, Key_Enter, ___,
+   ___),
+
+  [STENO] = KEYMAP_STACKED
+  (XXX,    XXX,   XXX,   XXX,   XXX,   XXX,   S(N6),
+   XXX,    S(N1), S(N2), S(N3), S(N4), S(N5), S(ST1),
+   S(FN),  S(S1), S(TL), S(PL), S(HL), S(ST1),
+   S(PWR), S(S2), S(KL), S(WL), S(RL), S(ST2), S(ST2),
+
+   S(RE1), XXX, S(A), S(O),
+   ___,
+
+   S(N7),  XXX,    XXX,   XXX,   XXX,   XXX,   ___,
+   S(ST3), S(N8),  S(N9), S(NA), S(NB), S(NC), XXX,
+           S(ST3), S(FR), S(PR), S(LR), S(TR), S(DR),
+   S(ST4), S(ST4), S(RR), S(BR), S(GR), S(SR), S(ZR),
+
+   S(E), S(U), XXX, S(RE2),
    ___)
 ) // KEYMAPS(
 
@@ -245,14 +232,13 @@ static void anyKeyMacro(uint8_t keyState) {
     toggledOn = true;
   }
 
-  if (keyIsPressed(keyState)) {
+  if (keyIsPressed(keyState))
     Kaleidoscope.hid().keyboard().pressKey(lastKey, toggledOn);
-  }
 }
 
-/** ledKeyMacro is used to provide cycling of keybaord layouts
+/** swapLayoutMacro is used to provide cycling of keybaord layouts
  */
-static void ledKeyMacro(uint8_t keyState) {
+static void swapLayoutMacro(uint8_t keyState) {
   if (keyToggledOn(keyState)) {
     if (Layer.isActive(QWERTY)) {
       Layer.deactivate(QWERTY);
@@ -287,11 +273,10 @@ const macro_t *macroAction(uint8_t macroIndex, uint8_t keyState) {
     anyKeyMacro(keyState);
     break;
 
-  case MACRO_LED:
-    ledKeyMacro(keyState);
+  case MACOR_SWAP_LAYOUTS:
+    swapLayoutMacro(keyState);
     break;
   }
-
   return MACRO_NONE;
 }
 
@@ -379,66 +364,12 @@ USE_MAGIC_COMBOS({.action = toggleKeyboardProtocol,
   .keys = { R3C6, R0C0, R0C6 }
 });
 
-namespace kaleidoscope {
-class FocusTestCommand : public Plugin {
- public:
-  FocusTestCommand() {}
-
-  EventHandlerResult onFocusEvent(const char *command) {
-    const char *cmd = PSTR("baby");
-
-    if (::Focus.handleHelp(command, cmd))
-      return EventHandlerResult::OK;
-
-    if (strcmp_P(command, cmd) == 0) {
-      LEDControl.set_all_leds_to(255, 20, 147);
-      return EventHandlerResult::EVENT_CONSUMED;
-    }
-
-    return EventHandlerResult::OK;
-  }
-};
-
-class FocusHelpCommand : public Plugin {
- public:
-  FocusHelpCommand() {}
-
-  EventHandlerResult onFocusEvent(const char *command) {
-    ::Focus.handleHelp(command, PSTR("help"));
-
-    return EventHandlerResult::OK;
-  }
-};
-
-}
-
-kaleidoscope::FocusTestCommand FocusTestCommand;
-kaleidoscope::FocusHelpCommand FocusHelpCommand;
-
 // First, tell Kaleidoscope which plugins you want to use.
 // The order can be important. For example, LED effects are
 // added in the order they're listed here.
 KALEIDOSCOPE_INIT_PLUGINS(
-  // The EEPROMSettings & EEPROMKeymap plugins make it possible to have an
-  // editable keymap in EEPROM.
-  EEPROMSettings,
-  EEPROMKeymap,
-
-  // Focus allows bi-directional communication with the host, and is the
-  // interface through which the keymap in EEPROM can be edited.
-  Focus,
-
-  // FocusSettingsCommand adds a few Focus commands, intended to aid in
-  // changing some settings of the keyboard, such as the default layer (via the
-  // `settings.defaultLayer` command)
-  FocusSettingsCommand,
-
-  // My own Focus commands
-  FocusTestCommand, FocusHelpCommand,
-
-  // FocusEEPROMCommand adds a set of Focus commands, which are very helpful in
-  // both debugging, and in backing up one's EEPROM contents.
-  FocusEEPROMCommand,
+  // GeminiPR/Plover for steno.
+  GeminiPR,
 
   // The boot greeting effect pulses the LED button for 10 seconds after the
   // keyboard is first connected
@@ -486,10 +417,6 @@ KALEIDOSCOPE_INIT_PLUGINS(
   // The Colormap effect makes it possible to set up per-layer colormaps
   ColormapEffect,
 
-  // The numpad plugin is responsible for lighting up the 'numpad' mode
-  // with a custom LED effect
-  NumPad,
-
   // The macros plugin adds support for macros
   Macros,
 
@@ -518,11 +445,8 @@ KALEIDOSCOPE_INIT_PLUGINS(
  */
 void setup() {
   // First, call Kaleidoscope's internal setup function
+  Kaleidoscope.serialPort().begin(9600);
   Kaleidoscope.setup();
-
-  // While we hope to improve this in the future, the NumPad plugin
-  // needs to be explicitly told which keymap layer is your numpad layer
-  NumPad.numPadLayer = NUMPAD;
 
   // We configure the AlphaSquare effect to use RED letters
   AlphaSquare.color = CRGB(255, 0, 0);
@@ -544,13 +468,6 @@ void setup() {
   // This avoids over-taxing devices that don't have a lot of power to share
   // with USB devices
   LEDOff.activate();
-
-  // To make the keymap editable without flashing new firmware, we store
-  // additional layers in EEPROM. For now, we reserve space for five layers. If
-  // one wants to use these layers, just set the default layer to one in EEPROM,
-  // by using the `settings.defaultLayer` Focus command, or by using the
-  // `keymap.onlyCustom` command to use EEPROM layers only.
-  EEPROMKeymap.setup(5);
 
   // We need to tell the Colormap plugin how many layers we want to have custom
   // maps for. To make things simple, we set it to five layers, which is how
