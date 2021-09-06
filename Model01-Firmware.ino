@@ -269,7 +269,7 @@ const macro_t *macroAction(uint8_t macro_id, KeyEvent &event) {
     break;
 
   case MACOR_SWAP_LAYOUTS:
-    swapLayoutMacro(keyState);
+    swapLayoutMacro(event.state);
     break;
   }
   return MACRO_NONE;
