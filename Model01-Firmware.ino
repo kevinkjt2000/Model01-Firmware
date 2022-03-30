@@ -83,7 +83,7 @@
 
 enum { MACRO_VERSION_INFO,
        MACRO_ANY,
-       MACOR_SWAP_LAYOUTS,
+       MACRO_SWAP_LAYOUTS,
      };
 
 
@@ -169,7 +169,7 @@ KEYMAPS(
    ShiftToLayer(FUNCTION)),
 
   [FUNCTION] =  KEYMAP_STACKED
-  (___,      Key_F1,           Key_F2,      Key_F3,     Key_F4,        Key_F5,           M(MACOR_SWAP_LAYOUTS),
+  (___,      Key_F1,           Key_F2,      Key_F3,     Key_F4,        Key_F5,           M(MACRO_SWAP_LAYOUTS),
    Key_Tab,  ___,              Key_mouseUp, Key_LeftCurlyBracket,        Key_mouseBtnR, Key_mouseWarpEnd, Key_mouseWarpNE,
    Key_Home, Key_mouseL,       Key_mouseDn, Key_mouseR, Key_mouseBtnL, Key_mouseWarpNW,
    Key_End,  Key_PrintScreen,  Key_Insert,  Key_G,      Key_mouseBtnM, Key_mouseWarpSW,  Key_mouseWarpSE,
@@ -268,7 +268,7 @@ const macro_t *macroAction(uint8_t macro_id, KeyEvent &event) {
     anyKeyMacro(event);
     break;
 
-  case MACOR_SWAP_LAYOUTS:
+  case MACRO_SWAP_LAYOUTS:
     swapLayoutMacro(event.state);
     break;
   }
